@@ -1,3 +1,6 @@
 const wc = window.console
-export const l = console.log.bind(wc)
-export const cl = console.clear.bind(wc)
+module.exports = {
+  cl : console.clear.bind(wc),
+  l : console.log.bind(wc),
+  isMobile : () => window.innerWidth <= 768
+}
