@@ -1,6 +1,6 @@
 {
-    "name": "threejs-starter",
-    "version": "2.0.0",
+    "name": "simple-webpack-starter",
+    "version": "1.0.0",
     "description": "",
     "main": "index.js",
     "scripts": {
@@ -20,12 +20,8 @@
     },
     "homepage": "",
     "dependencies": {
-        "dat.gui": "^0.7.6",
-        "gsap": "^3.6.0",
         "jquery": "^3.5.0",
-        "normalize.css": "^8.0.0",
-        "stats.js": "^0.17.0",
-        "three": "^0.125.0"
+        "normalize.css": "^8.0.0"
     },
     "devDependencies": {
         "@babel/core": "^7.12.10",
