@@ -168,7 +168,11 @@ export default class Starter {
       this.dragging = true
 
       if(!this.showInfo) this.getChildAt(2).visible = true
-      else this.getChildAt(2).visible = false
+      else {
+        this.getChildAt(2).visible = false
+        this.dragging = false
+        this.data = null
+      }
 
       this.showInfo = !this.showInfo
 
