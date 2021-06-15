@@ -1,0 +1,142 @@
+$w: #fff;
+$b: #000;
+$acc: #22b7e7;
+$sc: #1b4253;
+$txt-pr: #1f4454;
+$drk: #144554;
+$lt: #eaeef1;
+$tr: transparent;
+
+$breakpoints: (
+  'mob': 500px,
+  'tab': 769px,
+  'vsd': 1024px,
+  'sd': 1200px,
+  'lp': 1366px,
+  'ld': 1600px,
+  // 'mob-ls': 850px,
+  // 'sd-cust': 1000px,
+  // 'md': 1200px,
+  // 'uhd': 2000px
+) !default;
+
+// Cursor Pointer
+%cp{ cursor: pointer; }
+
+// Full height
+%fh{ height: 100%!important; }
+
+// Full width
+%fw{ width: 100%; }
+
+%fhw{  
+  height: 100%;
+  width: 100%;
+}
+
+// Justify content: space between
+%j-s-b {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+// Justify content: space around
+%j-s-a {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+// Justify content: center
+%j-c {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// Justify content: flex-start
+%j-f-s {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+// Justify content: flex-end
+%j-f-e {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+// Position absolute mixin
+@mixin pa($top:"", $left:"", $bottom:"", $right:"", $unit: "px") {
+  position: absolute;
+  @if $top != ""{
+    top: #{$top}#{$unit};
+  }
+  @if $left != ""{
+    left: #{$left}#{$unit};
+  }
+  @if $bottom != ""{
+    bottom: #{$bottom}#{$unit};
+  }
+  @if $right != ""{
+    right: #{$right}#{$unit};
+  }
+}
+
+// Position fixed mixin
+@mixin pf($top:"", $left:"", $bottom:"", $right:"", $unit: "px") {
+  position: fixed;
+  @if $top != ""{
+    top: #{$top}#{$unit};
+  }
+  @if $left != ""{
+    left: #{$left}#{$unit};
+  }
+  @if $bottom != ""{
+    bottom: #{$bottom}#{$unit};
+  }
+  @if $right != ""{
+    right: #{$right}#{$unit};
+  }
+}
+
+// Mixin for height-width
+@mixin hw($h:"", $w:"", $unit: "px") {  
+  @if $h != ""{
+    height: #{$h}#{$unit};
+  }
+  @if $w != ""{
+    width: #{$w}#{$unit};
+  }
+}
+
+// Prefix & Keyframes mixins
+@mixin prefixed($property, $value) {
+  -webkit-#{$property}: #{$value}; /* Safari */
+  -khtml-#{$property}: #{$value}; /* Konqueror HTML */  
+  -moz-#{$property}: #{$value}; /* Firefox */
+  -ms-#{$property}: #{$value}; /* Internet Explorer/Edge */
+  -o-#{$property}: #{$value}; /* Opera */
+  #{$property}: #{$value}; /* Non-prefixed version */
+}
+
+@mixin keyframes($name) {
+  @-webkit-keyframes #{$name} {
+    @content;
+  }
+  @-moz-keyframes #{$name} {
+    @content;
+  }
+  @-ms-keyframes #{$name} {
+    @content;
+  }
+  @-o-keyframes #{$name} {
+    @content;
+  }
+  @keyframes #{$name} {
+    @content;
+  }
+}
