@@ -1,8 +1,33 @@
 import * as PIXI from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
-import paralyzeTransformInheritance from "./utils/ignoreTransform";
+import * as dat from 'dat.gui'
 
+import paralyzeTransformInheritance from './utils/ignoreTransform'
 import { l, cl, isMobile } from './utils/helpers'
+
+class Arrow extends PIXI.Graphics {
+  constructor(color) {
+    super()
+    this.color = color || 0x000000
+    this.draw()
+  }
+
+  draw(){
+    this.clear()
+    .lineStyle(3, this.color, 1)
+    .moveTo(0, 0)
+    .lineTo(0, -40)
+    .moveTo(-10, -30)
+    .lineTo(0, -40)
+    .lineTo(10, -30)
+  }
+}
+
+const xMax = 23
+  , yMax = 23
+  , side = 64
+  , gap = 100
+  , opts = { showInfoBox: false }
 
 export default class Starter {
   constructor(){
@@ -31,10 +56,8 @@ export default class Starter {
   }
   init(){
     const { app, viewport } = this, { stage } = app
-
     // add the viewport to the stage
     stage.addChild(viewport)
-
     // activate plugins
     viewport
       .drag()
@@ -45,11 +68,7 @@ export default class Starter {
     const container = new PIXI.Container()
     container.position.set(10, 10)
     viewport.addChild(container)
-
-    const xMax = 23
-      , yMax = 23
-      , side = 64
-      , gap = 100
+    this.container = container
 
     const bg = new PIXI.Sprite(PIXI.Texture.from('assets/bg-grid.jpg'))
     container.addChild(bg)
@@ -60,82 +79,107 @@ export default class Starter {
 
     for (let i = 1; i <= xMax; i++){
       for (let j = 1; j <= yMax; j++){
-
         const group = new PIXI.Container()
+        // Add desk
+        group.addChild(this.createDesk(j, i))
 
-        const desk = new PIXI.Container()
-        group.addChild(desk)
+        // Transforms
+        group.addChild(this.createTransformInd())
 
-        const sprite = new PIXI.Sprite(PIXI.Texture.WHITE)
-        sprite.tint = 0xff0000
-        sprite.width = side * 2
-        sprite.height = side
-        sprite.anchor.set(0.5)
-        desk.addChild(sprite)
+        // InfoBox
+        group.addChild(this.createInfoBox(j, i))
 
-        const text = new PIXI.Text(`Desk ${i}-${j}`, { fill: "white", fontSize: 16 })
-        text.position.set(-side, 14)
-        desk.addChild(text)
-
-        const infoBoxGroup = new PIXI.Container()
-        infoBoxGroup.name = "InfoBox"
-        infoBoxGroup.visible = false
-
-        const infoBox =
-          new PIXI.Graphics()
-          .beginFill(0xffffff)
-          .drawRoundedRect(0, 0, 170, 75, 5)
-          .endFill()
-
-        const triangle =
-          new PIXI.Graphics()
-          .beginFill(0xffffff)
-          .drawPolygon(0, 0, 15, 15, 30, 0)
-          .endFill()
-        triangle.position.set(70, 75)
-
-        const infoText = new PIXI.Text(`Desk ${i}-${j}`, { fill: "black", fontSize: 12 })
-        infoText.position.set(5, 5)
-        infoText.baseText = `Desk ${i}-${j}`
-
-        infoBoxGroup.addChild(infoBox)
-        infoBoxGroup.addChild(triangle)
-        infoBoxGroup.addChild(infoText)
-
-        // Keep scale and rotation (act more like HTML element)
-        paralyzeTransformInheritance(infoBoxGroup, true, false)
-
-        // Setting to center of desk
-        infoBoxGroup.position.set(-85, -95)
-        group.addChild(infoBoxGroup)
-
-        const circ =
-          new PIXI.Graphics()
-            .lineStyle(1, 0x000000)
-            .drawCircle(0, 0, 75)
-
-        group.addChild(circ)
-
-        const circCtrl =
-          new PIXI.Graphics()
-            .beginFill(0x000000)
-            .drawCircle(0, -75, 10)
-            .endFill()
-
-        group.addChild(circCtrl)
-        circCtrl.name = "Knob"
+        // Listeners
+        !isMobile() && this.addListeners(group)
 
         group.position.set((j-1)*(side*2 + gap) + side, (i-1)*(side + gap) + side/2)
-        !isMobile() && this.addListeners(group)
         container.addChild(group)
       }
     }
+
+    const gui = new dat.GUI()
+    gui.add(opts, 'showInfoBox')
 
     // viewport border
     // const line = viewport.addChild(new PIXI.Graphics())
     // line.lineStyle(5, 0x000000).drawRect(-side*2, -side*2, viewport.worldWidth, viewport.worldHeight)
   }
+  createDesk(j, i){
+    const desk = new PIXI.Container()
+      , sprite = new PIXI.Sprite(PIXI.Texture.WHITE)
+      , text = new PIXI.Text(`Desk ${i}-${j}`, { fill: 0x000000, fontSize: 16 })
+
+    sprite.tint = 0xd7d7d6
+    sprite.width = side * 2
+    sprite.height = side
+    sprite.anchor.set(0.5)
+    desk.addChild(sprite)
+
+    text.position.set(-side, 14)
+    desk.addChild(text)
+
+    return desk
+  }
+  createTransformInd() {
+    // Rotation controls
+    const transformGr = new PIXI.Container()
+      , circ = new PIXI.Graphics().lineStyle(1, 0x000000).drawCircle(0, 0, 75)
+      , circCtrl = new PIXI.Graphics().lineStyle(2, 0x000000).beginFill(0xffffff).drawCircle(0, -75, 7)
+    // Directional Arrows
+      , arrUp = new Arrow(0x7290ce)
+      , arrDown = new Arrow(0xf19875)
+      , dot = new PIXI.Graphics().lineStyle(1, 0x000000).beginFill(0xffffff).drawCircle(0, 0, 5)
+
+    transformGr.name = "TransCtrl"
+    circCtrl.name = "Knob"
+    arrDown.rotation = Math.PI/2
+
+    transformGr.addChild(circ, circCtrl, arrDown, arrUp, dot)
+    transformGr.visible = false
+    return transformGr
+  }
+  createInfoBox(j, i){
+    const infoBoxGroup = new PIXI.Container()
+      , infoBox = new PIXI.Graphics()
+      , triangle = new PIXI.Graphics()
+      , infoText = new PIXI.Text(`Desk ${i}-${j}`, { fill: "black", fontSize: 12 })
+
+    infoBox
+      .beginFill(0xffffff)
+      .drawRoundedRect(0, 0, 170, 75, 5)
+      .endFill()
+
+    triangle
+      .beginFill(0xffffff)
+      .drawPolygon(0, 0, 15, 15, 30, 0)
+      .endFill()
+    triangle.position.set(70, 75)
+
+    infoText.position.set(5, 5)
+    infoText.baseText = `Desk ${i}-${j}`
+
+    infoBoxGroup.addChild(infoBox, triangle, infoText)
+
+    // Keep scale and rotation (act more like HTML element)
+    paralyzeTransformInheritance(infoBoxGroup, true, false)
+
+    // Setting to center of desk
+    infoBoxGroup.position.set(-85, -95)
+    infoBoxGroup.name = "InfoBox"
+    infoBoxGroup.visible = false
+    return infoBoxGroup
+  }
   addListeners(group){
+    const { container } = this
+
+    function clearAllSelected(){
+      container.children.forEach(child => {
+        child.selected = false
+        let gr = child.getChildByName("TransCtrl")
+        if(gr) gr.visible = false
+      })
+    }
+
     group.interactive = true
     group.buttonMode = true
 
@@ -169,8 +213,12 @@ export default class Starter {
       this.data = event.data
       updateCoords(infoBox, this.data, this.parent)
 
-      if(!this.showInfo) infoBox.visible = true
-      this.showInfo = !this.showInfo
+      clearAllSelected()
+      if(!this.selected) {
+        opts.showInfoBox && (infoBox.visible = true)
+        transformGr.visible = true
+      }
+      this.selected = !this.selected
     }
 
     function onDragEnd(){
@@ -198,10 +246,12 @@ export default class Starter {
     function hideInfoBox(e){
       e.stopPropagation()
       this.visible = false
-      group.showInfo = false
+      group.selected = false
     }
 
-    const knob = group.getChildByName("Knob")
+    const transformGr = group.getChildByName("TransCtrl")
+    , knob = transformGr.getChildByName("Knob")
+
     knob.interactive = true
     knob
     .on("pointerdown", onRotateDown)

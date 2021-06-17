@@ -20,6 +20,7 @@
     },
     "homepage": "",
     "dependencies": {
+        "dat.gui": "^0.7.7",
         "jquery": "^3.5.0",
         "normalize.css": "^8.0.0",
         "pixi-viewport": "^4.31.0",

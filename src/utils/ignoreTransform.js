@@ -56,7 +56,8 @@ export default function paralyzeTransformInheritance(child, ignoreParentScaleAnd
   if(!(t instanceof ParalyzedInheritanceTransform)) {
     t = new ParalyzedInheritanceTransform();
     t.setFromMatrix(child.transform.worldTransform);
-    child.transform = t}
+    child.transform = t
+  }
   t.ignoreParentScaleAndRotation = ignoreParentScaleAndRotation;
   t.truncateTranslation = truncateTranslation;
   return child
