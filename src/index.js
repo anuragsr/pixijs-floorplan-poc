@@ -5,6 +5,4 @@ import $ from 'jquery'
 import Starter from './Starter'
 import { l, cl } from './utils/helpers'
 
-$(() => {
-  new Starter().init()
-})
+$(() => { new Starter().init() })
