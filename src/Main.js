@@ -1,11 +1,12 @@
+import $ from 'jquery'
 import * as PIXI from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
-import * as dat from 'dat.gui'
+// import * as dat from 'dat.gui'
 
 import paralyzeTransformInheritance from './utils/ignoreTransform'
 import { l, cl, isMobile } from './utils/helpers'
 
-class Arrow extends PIXI.Graphics {
+class Arrow extends PIXI.Graphics{
   constructor(color) {
     super()
     this.color = color || 0x000000
@@ -56,22 +57,48 @@ class TranslateInd extends PIXI.Container{
     this.addChild(arrUp, arrDown, dot)
   }
 }
+class TextOutline extends PIXI.Graphics{
+  constructor(opts) {
+    super()
+    this.pos        = opts.pos || { x: 0, y: 0 }
+    this.color      = opts.color || 0x000000
+    this.textString = opts.textString || 'Sample'
+    this.textStyle  = opts.textStyle || null
+    this.padding = 10
+    this.draw()
+  }
+
+  draw(){
+    const { textString, textStyle, pos, padding } = this
+      , textMeasure = PIXI.TextMetrics.measureText(textString, textStyle)
+      , { height, width } = textMeasure
+
+    this.clear()
+      .lineStyle(1, this.color, 1)
+      .drawRoundedRect(0, 0, width + padding, height + padding, 5)
+
+    this.position.set(pos.x - (width + padding)/2, pos.y - (height + padding)/2)
+  }
+}
 
 const xMax = 23
   , yMax = 23
   , side = 64
   , gap = 100
   , opts = { showInfoBox: false }
+  , textResolution = 3
 
 export default class Main {
   constructor(){
+    PIXI.settings.PRECISION_FRAGMENT = 'highp'
     const app = new PIXI.Application({
       antialias: true,
-      height: window.innerHeight,
       width: window.innerWidth,
-      backgroundColor: 0xfffff0
+      height: window.innerHeight,
+      backgroundColor: 0xfffff0,
+      view: document.getElementById("canvas")
     })
-    document.body.appendChild(app.view)
+    app.renderer.roundPixels = true
 
     // create viewport
     const viewport = new Viewport({
@@ -84,27 +111,46 @@ export default class Main {
       // the interaction module is important for wheel to work properly when renderer.view is placed or scaled
       interaction: app.renderer.plugins.interaction
     })
+    this.viewport = viewport
 
     // Add the viewport to the stage
     app.stage.addChild(viewport)
 
     // Activate plugins
     viewport
-      .drag()
-      .pinch()
-      .wheel()
+    .drag()
+    .pinch()
+    .wheel()
     // .decelerate()
 
     // const gui = new dat.GUI()
     // gui.add(opts, 'showInfoBox')
 
-    this.viewport = viewport
     // Group to contain selected
     this.currGroup = []
+
+    // View / Edit mode
+    this.currMode = 'edit'
+
+    // Config obj for text addition
+    this.textConfig = {
+      // add text button
+      btn: $("#add-txt"),
+      // element containing the input
+      el: $("#ctn-txt-inp"),
+      // input
+      inp: $("#ctn-txt-inp input"),
+      // Adding text
+      add: false,
+      // Current text group
+      curr: null
+    }
   }
   init(){
     // Default container
     this.drawContainer()
+    // Global Listeners
+    this.addGlobalListeners()
     // Controls for single/multiple selection
     this.createControls()
     // Drawing Desk Grid
@@ -112,9 +158,12 @@ export default class Main {
   }
   drawContainer(){
     const { viewport } = this
-    const ctn = new PIXI.Container()
+      , ctn = new PIXI.Container()
+
     // ctn.position.set(10, 10)
+    ctn.interactive = true
     ctn.sortableChildren = true
+    ctn.name = "Main"
     viewport.addChild(ctn)
     this.ctn = ctn
 
@@ -128,6 +177,111 @@ export default class Main {
     // viewport border
     // const line = viewport.addChild(new PIXI.Graphics())
     // line.lineStyle(5, 0x000000).drawRect(-side*2, -side*2, viewport.worldWidth, viewport.worldHeight)
+  }
+  addGlobalListeners(){
+    const { ctn, viewport } = this, self = this
+      , { btn, inp, el } = this.textConfig
+
+    // Events on the PIXI scene
+    ctn
+    .on("pointerdown", this.clearGroup.bind(this))
+    .on("pointerdown",  onCtnDown)
+    // .on("pointerup", onCtnMoveEnd)
+    // .on("pointermove",  onCtnMove)
+
+    // function onCtnMoveEnd(e){
+    //   // if(e.target.name !== "Main") return
+    //
+    //   this.dragging = false
+    //   this.data = null
+    //   // if(!this.dragged){ self.clearGroup() }
+    // }
+    // function onCtnMove(){
+    //   // if (this.dragging){
+    //   //   this.dragged = true
+    //   //   // updateCoords(infoBox, this.data, this.parent)
+    //   //
+    //   //   // const pos = this.data.getLocalPosition(this.parent)
+    //   //   // this.position.x = pos.x
+    //   //   // this.position.y = pos.y
+    //   // } else{
+    //   //   // this.dragged = false
+    //   // }
+    // }
+
+    function onCtnDown(e){
+      this.dragging = true
+      const pos = e.data.getLocalPosition(this.parent), { add } = self.textConfig
+      // Add text
+      if(add){ drawText(pos) }
+    }
+
+    function drawText(pos){
+      // Text
+      const textGroup = new PIXI.Container()
+        , textString = 'Sample'
+        , textStyle = new PIXI.TextStyle({ fontSize: 18, strokeThickness: .5 })
+        , text = new PIXI.Text(textString, textStyle)
+
+      ctn.addChild(textGroup)
+      text.resolution = textResolution
+      text.anchor.set(.5)
+      text.position.set(pos.x, pos.y)
+      text.interactive = true
+      text.buttonMode = true
+      textGroup.addChild(text)
+      self.textConfig.curr = textGroup
+
+      // Outline for Text
+      const textOutline = new TextOutline({
+        color: 0x000000, textString, textStyle, pos
+      })
+      textGroup.addChild(textOutline)
+
+      // Set text input position
+      const newPos = text.toGlobal({x: 0, y: 0})
+      el.css({ left: newPos.x, top: newPos.y })
+      inp.val(textString)
+
+      self.textConfig.add = false
+      ctn.cursor = 'default'
+    }
+
+    viewport.on("moved", onViewportMove)
+
+    function onViewportMove(e) {
+      const { el, curr } = self.textConfig
+      if(curr){
+        const currText = curr.getChildAt(0)
+          , newPos = currText.toGlobal({x: 0, y: 0})
+        el.css({ left: newPos.x, top: newPos.y })
+      }
+    }
+
+    // DOM events
+    // Add text button
+    btn.on("click", () => {
+      this.textConfig.add = true
+      ctn.cursor = 'crosshair'
+    })
+
+    // Input change listener
+    inp.on("input", function(e) {
+      const { curr } = self.textConfig
+        , currText = curr.getChildAt(0)
+        , currOutline = curr.getChildAt(1)
+
+      currText.text = $(this).val()
+      currOutline.textString = $(this).val()
+      currOutline.draw()
+    })
+
+    // View / Edit mode
+    $(`input[name=btnradio][value=${this.currMode}]`).attr('checked', 'checked')
+    $(".btn-check").on("change", () => {
+      this.currMode = $('input[name=btnradio]:checked').val()
+      this.clearGroup()
+    })
   }
   drawDesks(){
     for (let i = 1; i <= xMax; i++){
@@ -152,7 +306,7 @@ export default class Main {
   createDesk(j, i){
     const desk = new PIXI.Container()
       , sprite = new PIXI.Sprite(PIXI.Texture.WHITE)
-      , text = new PIXI.Text(`Desk ${i}-${j}`, { fill: 0x000000, fontSize: 16 })
+      , text = new PIXI.Text(`Desk ${i}-${j}`, { fontSize: 18, strokeThickness: .5 })
 
     sprite.tint = 0xd7d7d6
     sprite.width = side * 2
@@ -161,6 +315,7 @@ export default class Main {
     desk.addChild(sprite)
 
     text.position.set(-side, 14)
+    text.resolution = textResolution
     desk.addChild(text)
 
     desk.name = "Desk"
@@ -287,6 +442,7 @@ export default class Main {
               child.y = newY
             })
 
+            // Storing current value as previous for next rotate event
             this.oldR = this.rotation
           }
           break;
@@ -332,18 +488,30 @@ export default class Main {
       this.action = null
     }
   }
-  addListeners(group){
+  clearGroup(){
     const { controls, currGroup } = this
+    currGroup.forEach(child => {
+      child.zIndex = 0
+      child.interactive = true
+      child.getChildByName("Desk").getChildAt(0).tint = 0xd7d7d6
+    })
+    currGroup.length = 0
+    controls.rotation = 0
+    controls.oldR = 0
+    controls.visible = false
+  }
+  addListeners(group){
+    const { controls, currGroup } = this, self = this
 
     group.interactive = true
     group.buttonMode = true
 
     group
-      .on('pointerdown', onDragStart)
-      .on('pointerup', onDragEnd)
-      .on('pointerupoutside', onDragEnd)
-      .on('touchend', onDragEnd)
-      .on('touchendoutside', onDragEnd)
+    .on('pointerdown',    onDragStart)
+    .on('pointerup',        onDragEnd)
+    .on('pointerupoutside', onDragEnd)
+    // .on('touchend',         onDragEnd)
+    // .on('touchendoutside',  onDragEnd)
     // .on('pointermove', onDragMove)
 
     function updateCoords(infoBox, data, parent){
@@ -354,18 +522,9 @@ export default class Main {
       infoText.text = `${infoText.baseText}\n{ X, Y } (Screen): ${pageX}, ${pageY}\n{ X, Y } (Relative): ${Math.round(pos.x)}, ${Math.round(pos.y)}`
     }
 
-    function clearGroup(){
-      currGroup.forEach(child => {
-        child.zIndex = 0
-        child.interactive = true
-        child.getChildByName("Desk").getChildAt(0).tint = 0xd7d7d6
-      })
-      currGroup.length = 0
-      controls.rotation = 0
-      controls.oldR = 0
-    }
-
     function addToGroup(el){
+      controls.visible = true
+
       // Add child to group array
       el.zIndex = 1
       el.interactive = false
@@ -391,18 +550,26 @@ export default class Main {
     }
 
     function onDragStart(event){
-      controls.visible = true
       // store a reference to the data
       // the reason for this is because of multitouch
       // we want to track the movement of this particular touch
       event.stopPropagation()
 
-      if(!(
-        event.data.originalEvent.ctrlKey // Ctrl Key
-        || event.data.originalEvent.metaKey // CMD for Mac
-      )) { clearGroup() } // Clear current group if not multi-select
+      switch(self.currMode){
+        case 'edit':
+          if(!(
+            event.data.originalEvent.ctrlKey // Ctrl Key
+            || event.data.originalEvent.metaKey // CMD for Mac
+          )) { self.clearGroup() } // Clear current group if not multi-select
 
-      addToGroup(this)
+          addToGroup(this)
+          break;
+
+        default: // view
+          // Show info window
+          break;
+      }
+
 
       this.dragging = true
       this.data = event.data
@@ -414,27 +581,16 @@ export default class Main {
       this.data = null
     }
 
-    function onDragMove(){
-      if (this.dragging){
-        // updateCoords(infoBox, this.data, this.parent)
-
-        const pos = this.data.getLocalPosition(this.parent)
-        this.position.x = pos.x
-        this.position.y = pos.y
-      }
-    }
-
     const infoBox = group.getChildByName("InfoBox")
     infoBox.interactive = true
 
-    infoBox
-      .on('pointerdown', hideInfoBox)
+    infoBox.on('pointerdown', hideInfoBox)
       // .on('touchstart', hideInfoBox)
 
     function hideInfoBox(e){
       e.stopPropagation()
       this.visible = false
-      group.selected = false
+      // group.selected = false
     }
   }
 }
