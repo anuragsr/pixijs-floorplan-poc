@@ -9,9 +9,13 @@ $(() => {
   st = performance.now()
   l("Show loader")
   new Main().init()
+
   requestAnimationFrame(() => {
     et = performance.now()
     l(`${et - st} ms`)
     l("Hide loader")
+    setTimeout(() => {
+      $(".loader-ol").fadeOut(2000)
+    }, 100)
   })
 })

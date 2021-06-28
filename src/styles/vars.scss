@@ -1,9 +1,5 @@
 $w: #fff;
 $b: #000;
-$acc: #22b7e7;
-$sc: #1b4253;
-$txt-pr: #1f4454;
-$drk: #144554;
 $lt: #eaeef1;
 $tr: transparent;
 
@@ -29,7 +25,7 @@ $breakpoints: (
 // Full width
 %fw{ width: 100%; }
 
-%fhw{  
+%fhw{
   height: 100%;
   width: 100%;
 }
@@ -104,7 +100,7 @@ $breakpoints: (
 }
 
 // Mixin for height-width
-@mixin hw($h:"", $w:"", $unit: "px") {  
+@mixin hw($h:"", $w:"", $unit: "px") {
   @if $h != ""{
     height: #{$h}#{$unit};
   }
@@ -116,7 +112,7 @@ $breakpoints: (
 // Prefix & Keyframes mixins
 @mixin prefixed($property, $value) {
   -webkit-#{$property}: #{$value}; /* Safari */
-  -khtml-#{$property}: #{$value}; /* Konqueror HTML */  
+  -khtml-#{$property}: #{$value}; /* Konqueror HTML */
   -moz-#{$property}: #{$value}; /* Firefox */
   -ms-#{$property}: #{$value}; /* Internet Explorer/Edge */
   -o-#{$property}: #{$value}; /* Opera */

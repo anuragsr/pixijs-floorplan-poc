@@ -28,6 +28,13 @@ class RotateInd extends PIXI.Container{
     super()
     const alphaVal = alpha || 0
     this.draw(radius, alphaVal)
+
+    this.zIndex = 1
+    this.sortableChildren = true
+    this.interactive = true
+    this.visible = false
+    this.cursor = 'move'
+    this.oldR = 0
   }
   draw(radius, alpha){
     this.children.length = 0
@@ -47,6 +54,7 @@ class TranslateInd extends PIXI.Container{
   constructor() {
     super()
     this.draw()
+    this.zIndex = 1
   }
   draw(){
     const arrUp = new Arrow(0x7290ce)
@@ -66,8 +74,8 @@ class TextOutline extends PIXI.Graphics{
     this.textStyle  = opts.textStyle || null
     this.padding = 10
     this.draw()
+    this.addListeners()
   }
-
   draw(){
     const { textString, textStyle, pos, padding } = this
       , textMeasure = PIXI.TextMetrics.measureText(textString, textStyle)
@@ -75,9 +83,20 @@ class TextOutline extends PIXI.Graphics{
 
     this.clear()
       .lineStyle(1, this.color, 1)
-      .drawRoundedRect(0, 0, width + padding, height + padding, 5)
+      .beginFill(this.color, .1)
+      // .drawRect(0, 0, width + padding, height + padding)
+      .drawRect(-(width + padding)/2, -(height + padding)/2, width+padding, height+padding)
 
-    this.position.set(pos.x - (width + padding)/2, pos.y - (height + padding)/2)
+    // this.position.set(pos.x - (width + padding)/2, pos.y - (height + padding)/2)
+    this.position.set(pos.x, pos.y)
+  }
+  addListeners(){
+    this.zIndex = 1
+    // textControls.sortableChildren = true
+    this.interactive = true
+    this.buttonMode = true
+    this.visible = false
+    this.cursor = 'move'
   }
 }
 
@@ -85,8 +104,10 @@ const xMax = 23
   , yMax = 23
   , side = 64
   , gap = 100
-  , opts = { showInfoBox: false }
+  // , opts = { showInfoBox: false }
   , textResolution = 3
+  , textString = 'Text Here'
+  , textStyle = new PIXI.TextStyle({ fontSize: 24, strokeThickness: .5 })
 
 export default class Main {
   constructor(){
@@ -131,6 +152,7 @@ export default class Main {
 
     // View / Edit mode
     this.currMode = 'edit'
+    // this.currMode = 'view'
 
     // Config obj for text addition
     this.textConfig = {
@@ -143,8 +165,13 @@ export default class Main {
       // Adding text
       add: false,
       // Current text group
-      curr: null
+      curr: null,
+      // Controls
+      controls: null
     }
+
+    // Group to contain text
+    this.currTextGroup = []
   }
   init(){
     // Default container
@@ -153,6 +180,8 @@ export default class Main {
     this.addGlobalListeners()
     // Controls for single/multiple selection
     this.createControls()
+    // Controls for text
+    this.createTextControls()
     // Drawing Desk Grid
     this.drawDesks()
   }
@@ -180,12 +209,12 @@ export default class Main {
   }
   addGlobalListeners(){
     const { ctn, viewport } = this, self = this
-      , { btn, inp, el } = this.textConfig
 
     // Events on the PIXI scene
     ctn
     .on("pointerdown", this.clearGroup.bind(this))
-    .on("pointerdown",  onCtnDown)
+    .on("pointerdown",  this.clearText.bind(this))
+    .on("pointerdown",                  onCtnDown)
     // .on("pointerup", onCtnMoveEnd)
     // .on("pointermove",  onCtnMove)
 
@@ -210,41 +239,30 @@ export default class Main {
     // }
 
     function onCtnDown(e){
-      this.dragging = true
+      // this.dragging = true
       const pos = e.data.getLocalPosition(this.parent), { add } = self.textConfig
       // Add text
-      if(add){ drawText(pos) }
-    }
+      if(add){
+        const text = new PIXI.Text(textString, textStyle)
+        text.anchor.set(.5)
+        text.resolution = textResolution
+        text.position.set(pos.x, pos.y)
+        text.interactive = true
+        text.buttonMode = true
+        ctn.addChild(text)
 
-    function drawText(pos){
-      // Text
-      const textGroup = new PIXI.Container()
-        , textString = 'Sample'
-        , textStyle = new PIXI.TextStyle({ fontSize: 18, strokeThickness: .5 })
-        , text = new PIXI.Text(textString, textStyle)
+        text.on('pointerdown', onDragStart)
+        function onDragStart(event){
+          event.stopPropagation()
+          self.selectText(this)
+        }
 
-      ctn.addChild(textGroup)
-      text.resolution = textResolution
-      text.anchor.set(.5)
-      text.position.set(pos.x, pos.y)
-      text.interactive = true
-      text.buttonMode = true
-      textGroup.addChild(text)
-      self.textConfig.curr = textGroup
+        self.selectText(text)
+        self.currTextGroup.push(text)
 
-      // Outline for Text
-      const textOutline = new TextOutline({
-        color: 0x000000, textString, textStyle, pos
-      })
-      textGroup.addChild(textOutline)
-
-      // Set text input position
-      const newPos = text.toGlobal({x: 0, y: 0})
-      el.css({ left: newPos.x, top: newPos.y })
-      inp.val(textString)
-
-      self.textConfig.add = false
-      ctn.cursor = 'default'
+        self.textConfig.add = false
+        ctn.cursor = 'default'
+      }
     }
 
     viewport.on("moved", onViewportMove)
@@ -252,36 +270,10 @@ export default class Main {
     function onViewportMove(e) {
       const { el, curr } = self.textConfig
       if(curr){
-        const currText = curr.getChildAt(0)
-          , newPos = currText.toGlobal({x: 0, y: 0})
+        const newPos = curr.toGlobal({x: 0, y: 0})
         el.css({ left: newPos.x, top: newPos.y })
       }
     }
-
-    // DOM events
-    // Add text button
-    btn.on("click", () => {
-      this.textConfig.add = true
-      ctn.cursor = 'crosshair'
-    })
-
-    // Input change listener
-    inp.on("input", function(e) {
-      const { curr } = self.textConfig
-        , currText = curr.getChildAt(0)
-        , currOutline = curr.getChildAt(1)
-
-      currText.text = $(this).val()
-      currOutline.textString = $(this).val()
-      currOutline.draw()
-    })
-
-    // View / Edit mode
-    $(`input[name=btnradio][value=${this.currMode}]`).attr('checked', 'checked')
-    $(".btn-check").on("change", () => {
-      this.currMode = $('input[name=btnradio]:checked').val()
-      this.clearGroup()
-    })
   }
   drawDesks(){
     for (let i = 1; i <= xMax; i++){
@@ -325,20 +317,19 @@ export default class Main {
     const infoBoxGroup = new PIXI.Container()
       , infoBox = new PIXI.Graphics()
       , triangle = new PIXI.Graphics()
-      , infoText = new PIXI.Text(`Desk ${i}-${j}`, { fill: "black", fontSize: 12 })
+      , infoText = new PIXI.Text(`Desk ${i}-${j}`, { fill: "black", fontSize: 14, strokeThickness: .5 })
 
     infoBox
       .beginFill(0xffffff)
-      .drawRoundedRect(0, 0, 170, 75, 5)
-      .endFill()
+      .drawRoundedRect(0, 0, 190, 75, 5)
 
     triangle
       .beginFill(0xffffff)
       .drawPolygon(0, 0, 15, 15, 30, 0)
-      .endFill()
-    triangle.position.set(70, 75)
+    triangle.position.set(80, 75)
 
     infoText.position.set(5, 5)
+    infoText.resolution = 1.15
     infoText.baseText = `Desk ${i}-${j}`
 
     infoBoxGroup.addChild(infoBox, triangle, infoText)
@@ -347,7 +338,7 @@ export default class Main {
     paralyzeTransformInheritance(infoBoxGroup, true, false)
 
     // Setting to center of desk
-    infoBoxGroup.position.set(-85, -95)
+    infoBoxGroup.position.set(-95, -95)
     infoBoxGroup.name = "InfoBox"
     infoBoxGroup.visible = false
     return infoBoxGroup
@@ -357,16 +348,9 @@ export default class Main {
 
     // Rotate indicator for multiple selection
     const controls = new RotateInd(75, .1)
-    controls.zIndex = 1
-    controls.sortableChildren = true
-    controls.interactive = true
-    controls.visible = false
-    controls.cursor = 'move'
-    controls.oldR = 0
-
     // Move indicator for multiple selection
-    const arrGr = new TranslateInd()
-    arrGr.zIndex = 1
+      , arrGr = new TranslateInd()
+
     controls.addChild(arrGr)
     ctn.addChild(controls)
     this.controls = controls
@@ -519,6 +503,7 @@ export default class Main {
         , { pageX, pageY } = data.originalEvent
         , infoText = infoBox.getChildAt(2)
 
+      infoBox.visible = true
       infoText.text = `${infoText.baseText}\n{ X, Y } (Screen): ${pageX}, ${pageY}\n{ X, Y } (Relative): ${Math.round(pos.x)}, ${Math.round(pos.y)}`
     }
 
@@ -554,6 +539,8 @@ export default class Main {
       // the reason for this is because of multitouch
       // we want to track the movement of this particular touch
       event.stopPropagation()
+      this.dragging = true
+      this.data = event.data
 
       switch(self.currMode){
         case 'edit':
@@ -567,13 +554,9 @@ export default class Main {
 
         default: // view
           // Show info window
+          updateCoords(infoBox, this.data, this.parent)
           break;
       }
-
-
-      this.dragging = true
-      this.data = event.data
-      // updateCoords(infoBox, this.data, this.parent)
     }
 
     function onDragEnd(){
@@ -590,7 +573,117 @@ export default class Main {
     function hideInfoBox(e){
       e.stopPropagation()
       this.visible = false
-      // group.selected = false
     }
+  }
+  clearText(){
+    const { curr, el, controls } = this.textConfig
+
+    // Previous values cleared
+    if(curr){ curr.interactive = true }
+    controls.visible = false
+    el.css({ visibility: "hidden" })
+  }
+  selectText(el){
+    const { inp, el: arrowBox, controls } = this.textConfig
+
+    this.clearText()
+
+    el.zIndex = 1
+    el.interactive = false
+
+    this.textConfig.curr = el
+
+    controls.visible = true
+    controls.textString = el.text
+    controls.pos = { x: el.x, y: el.y }
+    controls.draw()
+
+    // Storing old values for next move
+    controls.oldX = el.x
+    controls.oldY = el.y
+
+    // Set text input position
+    const newPos = el.toGlobal({x: 0, y: 0})
+    arrowBox.css({ visibility: "visible", left: newPos.x, top: newPos.y })
+    inp.val(el.text)
+  }
+  createTextControls(){
+    const { ctn } = this, self = this
+      , { btn, inp } = this.textConfig
+
+    // DOM events
+    // Add text button
+    btn.on("click", () => {
+      this.clearText()
+      this.textConfig.add = true
+      ctn.cursor = 'crosshair'
+    })
+
+    // Input change listener
+    inp.on("input", function(e) {
+      const { curr, controls } = self.textConfig
+
+      curr.text = $(this).val()
+      controls.textString = $(this).val()
+      controls.pos = curr.position
+      controls.draw()
+    })
+
+    // View / Edit mode
+    $(`input[name=btnradio][value=${this.currMode}]`).attr('checked', 'checked')
+    $(".btn-check").on("change", () => {
+      this.currMode = $('input[name=btnradio]:checked').val()
+      this.clearGroup()
+      this.clearText()
+      this.currTextGroup.forEach((text, index) => {
+        text.interactive = this.currMode === 'view' ? false : true
+      })
+    })
+
+    // Controls for Text
+    const textControls = new TextOutline({
+      color: 0x000000, textString, textStyle, pos: { x: 0, y: 0 }
+    })
+    ctn.addChild(textControls)
+    this.textConfig.controls = textControls
+
+    textControls
+      .on("pointerdown",    onDown)
+      .on("pointermove",    onMove)
+      .on("pointerup",        onUp)
+      .on("pointerupoutside", onUp)
+      .on('touchend',         onUp)
+
+    function onDown(e) {
+      e.stopPropagation()
+      this.dragging = true
+    }
+
+    function onMove(e) {
+      if (!this.dragging) return
+      e.stopPropagation()
+
+      if (this.dragging){
+        const { curr, el } = self.textConfig
+          , pos = e.data.getLocalPosition(this.parent)
+
+        this.x = pos.x
+        this.y = pos.y
+
+        const diffX = this.x - this.oldX, diffY = this.y - this.oldY
+        curr.x+= diffX
+        curr.y+= diffY
+
+        // Set text input position
+        const newPos = curr.toGlobal({x: 0, y: 0})
+        el.css({ left: newPos.x, top: newPos.y })
+
+        // Storing current values as previous for next move event
+        this.oldX = this.x
+        this.oldY = this.y
+      }
+    }
+
+    function onUp(){ this.dragging = false }
   }
 }
