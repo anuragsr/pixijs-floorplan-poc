@@ -547,7 +547,10 @@ export default class Main {
           if(!(
             event.data.originalEvent.ctrlKey // Ctrl Key
             || event.data.originalEvent.metaKey // CMD for Mac
-          )) { self.clearGroup() } // Clear current group if not multi-select
+          )) {
+            self.clearGroup()
+            self.clearText()
+          } // Clear current group if not multi-select
 
           addToGroup(this)
           break;
@@ -587,6 +590,7 @@ export default class Main {
     const { inp, el: arrowBox, controls } = this.textConfig
 
     this.clearText()
+    this.clearGroup()
 
     el.zIndex = 1
     el.interactive = false
