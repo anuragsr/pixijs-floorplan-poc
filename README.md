@@ -2,7 +2,7 @@
 A floorplan editor proof of concept using pixi.js<br/>
 `Ctrl + Click` for multi select
 
-[Demo](http://envisagecyberart.in/projects/fp-poc/)
+<a href="http://envisagecyberart.in/projects/fp-poc/" target="_blank">Demo</a>
 
 ![Screenshot](Screenshot.jpg?raw=true)
 ___
